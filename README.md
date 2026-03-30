@@ -16,17 +16,12 @@ rm -rf .git && git init
 git submodule add https://github.com/afritzsch/plugui.git ui/plugui
 ```
 
-**3. Rename `MyPlugin` to your plugin name**
+**3. Rename to your plugin name**
+```sh
+chmod +x rename.sh && ./rename.sh SimpleReverb
+```
 
-Find and replace `MyPlugin` in:
-- `CMakeLists.txt` — target name, binary data target, codesign targets
-- `Source/PluginProcessor.h` / `.cpp` — class name
-- `Source/PluginEditor.h` / `.cpp` — class name
-- `ui/package.json` — `name` field
-- `ui/index.html` — `<title>`
-- `ui/src/App.tsx` — plugin title text
-
-Also update in `CMakeLists.txt`:
+Then update the remaining fields in `CMakeLists.txt`:
 - `COMPANY_NAME`, `PLUGIN_MANUFACTURER_CODE`, `PLUGIN_CODE`, `PRODUCT_NAME`
 
 **4. Build the UI**
@@ -41,50 +36,6 @@ cmake -G Ninja ..
 ninja MyPlugin
 ```
 
----
-
-## Adding a parameter
-
-**C++ — `PluginProcessor.cpp`** (`createParameterLayout`):
-```cpp
-layout.add(std::make_unique<juce::AudioParameterFloat>(
-    juce::ParameterID{ "gain", 1 }, "Gain",
-    juce::NormalisableRange<float>(-60.0f, 12.0f, 0.1f), 0.0f,
-    juce::AudioParameterFloatAttributes().withLabel("dB")
-));
-```
-
-**C++ — `PluginEditor.h`** (add relay + attachment):
-```cpp
-juce::WebSliderRelay gainRelay { "gainSlider" };
-juce::WebSliderParameterAttachment gainAttachment;
-```
-
-**C++ — `PluginEditor.cpp`** (wire in constructor):
-```cpp
-webComponent(juce::WebBrowserComponent::Options{}
-    .withNativeIntegrationEnabled()
-    .withOptionsFrom(gainRelay)   // add this
-    ...),
-gainAttachment(*dynamic_cast<juce::RangedAudioParameter*>(
-    proc.apvts.getParameter("gain")), gainRelay)
-```
-
-**JS — `ui/src/juceDevMock.ts`** (mock for browser dev):
-```ts
-__juce__sliders: ['gainSlider'],
-// and in emitEvent, respond with properties + initial value
-```
-
-**JS — `ui/src/App.tsx`**:
-```tsx
-import { Knob, useJuceSlider } from 'plugui'
-
-const gain = useJuceSlider('gainSlider')
-<Knob value={gain.scaledValue} min={gain.properties.start} max={gain.properties.end} ... />
-```
-
----
 
 ## Development (live reload)
 
