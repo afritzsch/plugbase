@@ -30,8 +30,27 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
 
+    // ── Visualizers ── (remove if not needed) ─────────────────────────────────
+    static constexpr int waveformSize = 2048;
+    juce::AbstractFifo              waveformFifo   { waveformSize };
+    std::array<float, waveformSize> waveformBuffer {};
+
+    static constexpr int fftOrder = 10;
+    static constexpr int fftSize  = 1 << fftOrder;
+    juce::dsp::FFT                 fft            { fftOrder };
+    std::array<float, fftSize * 2> fftBuffer      {};
+    int                            fftBufferIndex { 0 };
+    juce::SpinLock                 spectrumLock;
+    std::array<float, fftSize / 2> spectrumBins   {};
+    // ──────────────────────────────────────────────────────────────────────────
+
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
+    // ── Visualizers ── (remove if not needed) ─────────────────────────────────
+    void updateWaveform(const juce::AudioBuffer<float>& buffer);
+    void updateSpectrum(const juce::AudioBuffer<float>& buffer);
+    // ──────────────────────────────────────────────────────────────────────────
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MyPluginProcessor)
 };

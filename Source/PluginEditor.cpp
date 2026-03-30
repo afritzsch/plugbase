@@ -23,6 +23,13 @@ MyPluginEditor::MyPluginEditor(MyPluginProcessor& p)
 #endif
 
     setSize(400, 300); // TODO: set your plugin window size
+    startTimerHz(30);
+}
+
+void MyPluginEditor::timerCallback()
+{
+    emitWaveform(); // remove if not needed
+    emitSpectrum(); // remove if not needed
 }
 
 void MyPluginEditor::resized()
@@ -63,4 +70,49 @@ MyPluginEditor::getResource(const juce::String& url)
     std::memcpy(bytes.data(), data, static_cast<size_t>(dataSize));
     return juce::WebBrowserComponent::Resource{ std::move(bytes), mimeType };
 #endif
+}
+
+// ── Visualizers ── (remove if not needed) ─────────────────────────────────────
+
+void MyPluginEditor::emitWaveform()
+{
+    const int available = proc.waveformFifo.getNumReady();
+    if (available < 256) return;
+
+    std::vector<float> temp(static_cast<size_t>(available));
+    int start1, size1, start2, size2;
+    proc.waveformFifo.prepareToRead(available, start1, size1, start2, size2);
+    std::copy(proc.waveformBuffer.begin() + start1,
+              proc.waveformBuffer.begin() + start1 + size1,
+              temp.begin());
+    std::copy(proc.waveformBuffer.begin() + start2,
+              proc.waveformBuffer.begin() + start2 + size2,
+              temp.begin() + size1);
+    proc.waveformFifo.finishedRead(size1 + size2);
+
+    constexpr int outSamples = 256;
+    juce::Array<juce::var> pts;
+    for (int i = 0; i < outSamples; ++i) {
+        int idx = (int)(i * (float)temp.size() / outSamples);
+        pts.add((double)temp[static_cast<size_t>(idx)]);
+    }
+    juce::DynamicObject::Ptr obj = new juce::DynamicObject();
+    obj->setProperty("samples", juce::var(pts));
+    webComponent.emitEventIfBrowserIsVisible("waveformUpdate", juce::var(obj.get()));
+}
+
+void MyPluginEditor::emitSpectrum()
+{
+    juce::SpinLock::ScopedTryLockType lock(proc.spectrumLock);
+    if (!lock.isLocked()) return;
+
+    constexpr int outBins = 128;
+    juce::Array<juce::var> bins;
+    for (int i = 0; i < outBins; ++i) {
+        int idx = i * (MyPluginProcessor::fftSize / 2) / outBins;
+        bins.add((double)proc.spectrumBins[idx]);
+    }
+    juce::DynamicObject::Ptr obj = new juce::DynamicObject();
+    obj->setProperty("bins", juce::var(bins));
+    webComponent.emitEventIfBrowserIsVisible("spectrumUpdate", juce::var(obj.get()));
 }

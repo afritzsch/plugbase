@@ -49,20 +49,31 @@ if (!window.__JUCE__) {
       removeEventListener([id, listenerId]) {
         listeners[id]?.delete(listenerId)
       },
-      emitEvent(id, payload) {
-        if (payload?.eventType !== 'requestInitialUpdate') return
-
-        // TODO: respond with mock properties and values for your parameters, e.g.:
-        // if (id === 'gainSlider') {
-        //   const cbs = [...(listeners[id]?.values() ?? [])]
-        //   setTimeout(() => {
-        //     cbs.forEach(cb => cb({ eventType: 'propertiesChanged', start: -60, end: 12, ... }))
-        //     cbs.forEach(cb => cb({ eventType: 'valueChanged', value: 0.0 }))
-        //   }, 0)
-        // }
+      emitEvent(_id, _payload) {
+        // TODO: handle requestInitialUpdate for your parameters
       },
     },
   }
+
+  // Simulate waveform at 30 Hz
+  let t = 0
+  setInterval(() => {
+    t += 0.05
+    const samples = Array.from({ length: 256 }, (_, i) =>
+      Math.sin(2 * Math.PI * (i / 256 + t)) * 0.5
+    )
+    const cbs = [...(listeners['waveformUpdate']?.values() ?? [])]
+    cbs.forEach(cb => cb({ eventType: 'waveformUpdate', samples } as never))
+  }, 33)
+
+  // Simulate spectrum at 30 Hz
+  setInterval(() => {
+    const bins = Array.from({ length: 128 }, (_, i) =>
+      -20 - (i / 128) * 60 + (Math.random() * 6 - 3)
+    )
+    const cbs = [...(listeners['spectrumUpdate']?.values() ?? [])]
+    cbs.forEach(cb => cb({ eventType: 'spectrumUpdate', bins } as never))
+  }, 33)
 }
 
 export {}

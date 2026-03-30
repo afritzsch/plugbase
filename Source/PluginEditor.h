@@ -1,7 +1,8 @@
 #pragma once
 #include "PluginProcessor.h"
 
-class MyPluginEditor : public juce::AudioProcessorEditor
+class MyPluginEditor : public juce::AudioProcessorEditor,
+                       private juce::Timer
 {
 public:
     explicit MyPluginEditor(MyPluginProcessor&);
@@ -32,6 +33,13 @@ private:
 
     // TODO: add WebSliderParameterAttachment / WebToggleButtonParameterAttachment, e.g.:
     // juce::WebSliderParameterAttachment gainAttachment;
+
+    void timerCallback() override;
+
+    // ── Visualizers ── (remove if not needed) ─────────────────────────────────
+    void emitWaveform();
+    void emitSpectrum();
+    // ──────────────────────────────────────────────────────────────────────────
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MyPluginEditor)
 };
