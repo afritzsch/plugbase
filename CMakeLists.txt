@@ -17,7 +17,7 @@ FetchContent_MakeAvailable(JUCE)
 
 # ── Plugin target ─────────────────────────────────────────────────────────────
 juce_add_plugin(MyPlugin
-    COMPANY_NAME            "MyPlugins"        # TODO
+    COMPANY_NAME            "YourCompany"      # TODO
     PLUGIN_MANUFACTURER_CODE MPlg              # TODO: unique 4-char code
     PLUGIN_CODE             Mypg              # TODO: unique 4-char code
     FORMATS                 VST3 AU

@@ -90,11 +90,11 @@ void MyPluginEditor::emitWaveform()
               temp.begin() + size1);
     proc.waveformFifo.finishedRead(size1 + size2);
 
-    constexpr int outSamples = 256;
+    constexpr size_t outSamples = 256;
     juce::Array<juce::var> pts;
-    for (int i = 0; i < outSamples; ++i) {
-        int idx = (int)(i * (float)temp.size() / outSamples);
-        pts.add((double)temp[static_cast<size_t>(idx)]);
+    for (size_t i = 0; i < outSamples; ++i) {
+        size_t idx = i * temp.size() / outSamples;
+        pts.add((double)temp[idx]);
     }
     juce::DynamicObject::Ptr obj = new juce::DynamicObject();
     obj->setProperty("samples", juce::var(pts));
@@ -110,7 +110,7 @@ void MyPluginEditor::emitSpectrum()
     juce::Array<juce::var> bins;
     for (int i = 0; i < outBins; ++i) {
         int idx = i * (MyPluginProcessor::fftSize / 2) / outBins;
-        bins.add((double)proc.spectrumBins[idx]);
+        bins.add((double)proc.spectrumBins[static_cast<size_t>(idx)]);
     }
     juce::DynamicObject::Ptr obj = new juce::DynamicObject();
     obj->setProperty("bins", juce::var(bins));

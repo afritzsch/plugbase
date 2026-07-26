@@ -1,0 +1,3 @@
+[submodule "ui/plugui"]
+	path = ui/plugui
+	url = https://github.com/afritzsch/plugui.git

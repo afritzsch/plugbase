@@ -28,9 +28,21 @@ void MyPluginProcessor::prepareToPlay(double /*sampleRate*/, int /*samplesPerBlo
     // TODO: initialise DSP here
 }
 
+bool MyPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+{
+    const auto mainOut = layouts.getMainOutputChannelSet();
+    if (mainOut != juce::AudioChannelSet::mono() && mainOut != juce::AudioChannelSet::stereo())
+        return false;
+
+    return mainOut == layouts.getMainInputChannelSet();
+}
+
 void MyPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
+
+    for (auto ch = getTotalNumInputChannels(); ch < getTotalNumOutputChannels(); ++ch)
+        buffer.clear(ch, 0, buffer.getNumSamples());
 
     // TODO: process audio here
 
@@ -74,13 +86,13 @@ void MyPluginProcessor::updateWaveform(const juce::AudioBuffer<float>& buffer)
         float mono = 0.0f;
         for (int ch = 0; ch < numChannels; ++ch)
             mono += buffer.getReadPointer(ch)[i];
-        waveformBuffer[start1 + i] = mono / numChannels;
+        waveformBuffer[static_cast<size_t>(start1 + i)] = mono / static_cast<float>(numChannels);
     }
     for (int i = 0; i < size2; ++i) {
         float mono = 0.0f;
         for (int ch = 0; ch < numChannels; ++ch)
             mono += buffer.getReadPointer(ch)[size1 + i];
-        waveformBuffer[start2 + i] = mono / numChannels;
+        waveformBuffer[static_cast<size_t>(start2 + i)] = mono / static_cast<float>(numChannels);
     }
     waveformFifo.finishedWrite(size1 + size2);
 }
@@ -95,15 +107,15 @@ void MyPluginProcessor::updateSpectrum(const juce::AudioBuffer<float>& buffer)
             mono += buffer.getReadPointer(ch)[i];
         mono /= (float)numChannels;
 
-        fftBuffer[fftBufferIndex] = mono;
+        fftBuffer[static_cast<size_t>(fftBufferIndex)] = mono;
         if (++fftBufferIndex == fftSize) {
             fftBufferIndex = 0;
             std::fill(fftBuffer.begin() + fftSize, fftBuffer.end(), 0.0f);
             fft.performFrequencyOnlyForwardTransform(fftBuffer.data());
             juce::SpinLock::ScopedLockType lock(spectrumLock);
             for (int bin = 0; bin < fftSize / 2; ++bin) {
-                float mag = fftBuffer[bin] / (float)fftSize;
-                spectrumBins[bin] = juce::Decibels::gainToDecibels(mag, -100.0f);
+                float mag = fftBuffer[static_cast<size_t>(bin)] / (float)fftSize;
+                spectrumBins[static_cast<size_t>(bin)] = juce::Decibels::gainToDecibels(mag, -100.0f);
             }
         }
     }
