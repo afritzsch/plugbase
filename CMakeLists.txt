@@ -39,6 +39,7 @@ target_sources(MyPlugin PRIVATE
     Source/PluginEditor.cpp
     Source/WaveformAnalyser.cpp
     Source/SpectrumAnalyser.cpp
+    Source/VisualizerEmitter.cpp
 )
 
 target_compile_definitions(MyPlugin PUBLIC

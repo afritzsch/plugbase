@@ -10,9 +10,10 @@ MyPluginEditor::MyPluginEditor(MyPluginProcessor& p)
       webComponent(juce::WebBrowserComponent::Options{}
           .withNativeIntegrationEnabled()
           // TODO: add .withOptionsFrom(yourRelay) for each relay
-          .withResourceProvider([](const juce::String& url) { return getResource(url); }))
+          .withResourceProvider([](const juce::String& url) { return getResource(url); })),
       // TODO: initialise attachments here, e.g.:
       // gainAttachment(*dynamic_cast<juce::RangedAudioParameter*>(proc.apvts.getParameter("gain")), gainRelay)
+      visualizerEmitter(proc.waveformAnalyser, proc.spectrumAnalyser, webComponent) // remove if not needed
 {
     addAndMakeVisible(webComponent);
 
@@ -23,13 +24,6 @@ MyPluginEditor::MyPluginEditor(MyPluginProcessor& p)
 #endif
 
     setSize(400, 300); // TODO: set your plugin window size
-    startTimerHz(30);
-}
-
-void MyPluginEditor::timerCallback()
-{
-    emitWaveform(); // remove if not needed
-    emitSpectrum(); // remove if not needed
 }
 
 void MyPluginEditor::resized()
@@ -70,40 +64,4 @@ MyPluginEditor::getResource(const juce::String& url)
     std::memcpy(bytes.data(), data, static_cast<size_t>(dataSize));
     return juce::WebBrowserComponent::Resource{ std::move(bytes), mimeType };
 #endif
-}
-
-// ── Visualizers ── (remove if not needed) ─────────────────────────────────────
-
-namespace {
-    juce::Array<juce::var> downsample(const float* data, size_t len, size_t outCount)
-    {
-        juce::Array<juce::var> out;
-        for (size_t i = 0; i < outCount; ++i)
-            out.add((double)data[i * len / outCount]);
-        return out;
-    }
-
-    void emitSamples(juce::WebBrowserComponent& browser, const char* eventId,
-                      const char* propertyName, const float* data, size_t len, size_t outCount)
-    {
-        juce::DynamicObject::Ptr obj = new juce::DynamicObject();
-        obj->setProperty(propertyName, juce::var(downsample(data, len, outCount)));
-        browser.emitEventIfBrowserIsVisible(eventId, juce::var(obj.get()));
-    }
-}
-
-void MyPluginEditor::emitWaveform()
-{
-    auto samples = proc.waveformAnalyser.readLatest(256);
-    if (samples.empty()) return;
-
-    emitSamples(webComponent, "waveformUpdate", "samples", samples.data(), samples.size(), 256);
-}
-
-void MyPluginEditor::emitSpectrum()
-{
-    std::array<float, SpectrumAnalyser::numBins> mags;
-    if (!proc.spectrumAnalyser.getMagnitudesDb(mags)) return;
-
-    emitSamples(webComponent, "spectrumUpdate", "bins", mags.data(), mags.size(), 128);
 }
