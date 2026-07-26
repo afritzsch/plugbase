@@ -37,6 +37,8 @@ juce_generate_juce_header(MyPlugin)
 target_sources(MyPlugin PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
+    Source/WaveformAnalyser.cpp
+    Source/SpectrumAnalyser.cpp
 )
 
 target_compile_definitions(MyPlugin PUBLIC

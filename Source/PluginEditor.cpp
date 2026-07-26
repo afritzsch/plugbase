@@ -74,45 +74,36 @@ MyPluginEditor::getResource(const juce::String& url)
 
 // ── Visualizers ── (remove if not needed) ─────────────────────────────────────
 
+namespace {
+    juce::Array<juce::var> downsample(const float* data, size_t len, size_t outCount)
+    {
+        juce::Array<juce::var> out;
+        for (size_t i = 0; i < outCount; ++i)
+            out.add((double)data[i * len / outCount]);
+        return out;
+    }
+
+    void emitSamples(juce::WebBrowserComponent& browser, const char* eventId,
+                      const char* propertyName, const float* data, size_t len, size_t outCount)
+    {
+        juce::DynamicObject::Ptr obj = new juce::DynamicObject();
+        obj->setProperty(propertyName, juce::var(downsample(data, len, outCount)));
+        browser.emitEventIfBrowserIsVisible(eventId, juce::var(obj.get()));
+    }
+}
+
 void MyPluginEditor::emitWaveform()
 {
-    const int available = proc.waveformFifo.getNumReady();
-    if (available < 256) return;
+    auto samples = proc.waveformAnalyser.readLatest(256);
+    if (samples.empty()) return;
 
-    std::vector<float> temp(static_cast<size_t>(available));
-    int start1, size1, start2, size2;
-    proc.waveformFifo.prepareToRead(available, start1, size1, start2, size2);
-    std::copy(proc.waveformBuffer.begin() + start1,
-              proc.waveformBuffer.begin() + start1 + size1,
-              temp.begin());
-    std::copy(proc.waveformBuffer.begin() + start2,
-              proc.waveformBuffer.begin() + start2 + size2,
-              temp.begin() + size1);
-    proc.waveformFifo.finishedRead(size1 + size2);
-
-    constexpr size_t outSamples = 256;
-    juce::Array<juce::var> pts;
-    for (size_t i = 0; i < outSamples; ++i) {
-        size_t idx = i * temp.size() / outSamples;
-        pts.add((double)temp[idx]);
-    }
-    juce::DynamicObject::Ptr obj = new juce::DynamicObject();
-    obj->setProperty("samples", juce::var(pts));
-    webComponent.emitEventIfBrowserIsVisible("waveformUpdate", juce::var(obj.get()));
+    emitSamples(webComponent, "waveformUpdate", "samples", samples.data(), samples.size(), 256);
 }
 
 void MyPluginEditor::emitSpectrum()
 {
-    juce::SpinLock::ScopedTryLockType lock(proc.spectrumLock);
-    if (!lock.isLocked()) return;
+    std::array<float, SpectrumAnalyser::numBins> mags;
+    if (!proc.spectrumAnalyser.getMagnitudesDb(mags)) return;
 
-    constexpr int outBins = 128;
-    juce::Array<juce::var> bins;
-    for (int i = 0; i < outBins; ++i) {
-        int idx = i * (MyPluginProcessor::fftSize / 2) / outBins;
-        bins.add((double)proc.spectrumBins[static_cast<size_t>(idx)]);
-    }
-    juce::DynamicObject::Ptr obj = new juce::DynamicObject();
-    obj->setProperty("bins", juce::var(bins));
-    webComponent.emitEventIfBrowserIsVisible("spectrumUpdate", juce::var(obj.get()));
+    emitSamples(webComponent, "spectrumUpdate", "bins", mags.data(), mags.size(), 128);
 }
